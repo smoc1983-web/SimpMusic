@@ -75,6 +75,11 @@
         tools:targetApi="tiramisu">
 
         <activity
+            android:name=".MusicSourceActivity"
+            android:exported="false"
+            android:label="Музыка — Hitmo" />
+
+        <activity
             android:name=".MainActivity"
             android:configChanges="keyboardHidden|screenSize|screenLayout|smallestScreenSize"
             android:exported="true"
