@@ -8,6 +8,14 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -256,7 +264,15 @@ class MainActivity : AppCompatActivity() {
 
         if (!BuildConfig.DEBUG) viewModel.checkOfficialBuild(packageName, signingCertSha256())
         setContent {
-            App(viewModel)
+            Box(modifier = Modifier.fillMaxSize()) {
+                App(viewModel)
+                Button(
+                    onClick = { startActivity(Intent(this@MainActivity, MusicSourceActivity::class.java)) },
+                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 42.dp, end = 12.dp),
+                ) {
+                    Text("♫ Hitmo")
+                }
+            }
         }
     }
 
