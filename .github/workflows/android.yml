@@ -63,15 +63,27 @@ jobs:
       - name: Build release APK
         run: ./gradlew androidApp:assembleRelease -x :androidApp:uploadSentryProguardMappingsRelease
 
-      - name: Check build-tools version
-        shell: bash
+      - name: Check signing credentials
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          BUILD_TOOL_VERSION=$(ls /usr/local/lib/android/sdk/build-tools/ | tail -n 1)
-          echo "BUILD_TOOL_VERSION=$BUILD_TOOL_VERSION" >> $GITHUB_ENV
-          echo Last build tool version is: $BUILD_TOOL_VERSION
+          if [[ -n "$SIGNING_KEY" && -n "$ALIAS" && -n "$KEY_STORE_PASSWORD" && -n "$KEY_PASSWORD" ]]; then
+            echo "HAS_SIGNING=true" >> "$GITHUB_ENV"
+          else
+            echo "HAS_SIGNING=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Check build-tools version
+        if: env.HAS_SIGNING == 'true'
+        run: |
+          BUILD_TOOL_VERSION=$(ls /usr/local/lib/android/sdk/build-tools/ | sort -V | tail -n 1)
+          echo "BUILD_TOOL_VERSION=$BUILD_TOOL_VERSION" >> "$GITHUB_ENV"
 
       - uses: kevin-david/zipalign-sign-android-release@v2
-        id: sign_app
+        if: env.HAS_SIGNING == 'true'
         with:
           releaseDirectory: androidApp/build/outputs/apk/release
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
@@ -80,13 +92,27 @@ jobs:
           keyPassword: ${{ secrets.KEY_PASSWORD }}
           zipAlign: true
         env:
-            BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
+          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
 
-      - name: Upload APK
+      - name: Build debug APK when no release key
+        if: env.HAS_SIGNING != 'true'
+        run: ./gradlew androidApp:assembleDebug
+
+      - name: Upload signed release APK
+        if: env.HAS_SIGNING == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: app
+          name: app-release
           path: androidApp/build/outputs/apk/release/*-signed.apk
+          if-no-files-found: error
+
+      - name: Upload debug APK
+        if: env.HAS_SIGNING != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: androidApp/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
 
   # SimpMusic for vivo (vivoAndroidApp, com.spotify.music), same Full build as above.
   build-vivo:
@@ -130,15 +156,27 @@ jobs:
       - name: Build vivo release APK
         run: ./gradlew vivoAndroidApp:assembleRelease -x :vivoAndroidApp:uploadSentryProguardMappingsRelease
 
-      - name: Check build-tools version
-        shell: bash
+      - name: Check signing credentials
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          BUILD_TOOL_VERSION=$(ls /usr/local/lib/android/sdk/build-tools/ | tail -n 1)
-          echo "BUILD_TOOL_VERSION=$BUILD_TOOL_VERSION" >> $GITHUB_ENV
-          echo Last build tool version is: $BUILD_TOOL_VERSION
+          if [[ -n "$SIGNING_KEY" && -n "$ALIAS" && -n "$KEY_STORE_PASSWORD" && -n "$KEY_PASSWORD" ]]; then
+            echo "HAS_SIGNING=true" >> "$GITHUB_ENV"
+          else
+            echo "HAS_SIGNING=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Check build-tools version
+        if: env.HAS_SIGNING == 'true'
+        run: |
+          BUILD_TOOL_VERSION=$(ls /usr/local/lib/android/sdk/build-tools/ | sort -V | tail -n 1)
+          echo "BUILD_TOOL_VERSION=$BUILD_TOOL_VERSION" >> "$GITHUB_ENV"
 
       - uses: kevin-david/zipalign-sign-android-release@v2
-        id: sign_app
+        if: env.HAS_SIGNING == 'true'
         with:
           releaseDirectory: vivoAndroidApp/build/outputs/apk/release
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
@@ -147,10 +185,24 @@ jobs:
           keyPassword: ${{ secrets.KEY_PASSWORD }}
           zipAlign: true
         env:
-            BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
+          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
 
-      - name: Upload APK
+      - name: Build debug APK when no release key
+        if: env.HAS_SIGNING != 'true'
+        run: ./gradlew vivoAndroidApp:assembleDebug
+
+      - name: Upload signed release APK
+        if: env.HAS_SIGNING == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: app-vivo
+          name: app-vivo-release
           path: vivoAndroidApp/build/outputs/apk/release/*-signed.apk
+          if-no-files-found: error
+
+      - name: Upload debug APK
+        if: env.HAS_SIGNING != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-vivo-debug
+          path: vivoAndroidApp/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
